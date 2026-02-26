@@ -159,16 +159,14 @@ def chat():
 def health():
     return jsonify({'status': 'ok'})
 
-  if __name__ == '__main__':
-    import os
+   if __name__ == '__main__':
+       import os
 
-    print("Starting Succession Chatbot server...")
-    print("Make sure to install required packages: pip install flask flask-cors requests beautifulsoup4")
+       print("Starting Succession Chatbot server...")
+       print("Make sure to install required packages: pip install flask flask-cors requests beautifulsoup4")
 
-    port = int(os.environ.get("PORT", 5000))
-    # host='0.0.0.0' is important so Render can reach it
-    app.run(host="0.0.0.0", port=port)
        port = int(os.environ.get("PORT", 5000))
        # host='0.0.0.0' is important so Render can reach it
        app.run(host="0.0.0.0", port=port)
+
 
