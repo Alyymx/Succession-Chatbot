@@ -69,6 +69,32 @@ async function sendMessage() {
         } else {
             addMessage("I apologize, but I'm having trouble processing that right now. Could you try rephrasing your question?");
         }
+    } catch (error) {
+        removeTypingIndicator();
+        addMessage("I'm having trouble connecting to the server. Please check if the Render backend is running.");
+        console.error('Error:', error);
+    } finally {
+        sendButton.disabled = false;
+        userInput.focus();
+    }
+}
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message })
+        });
+        
+        const data = await response.json();
+        removeTypingIndicator();
+        
+        if (data.response) {
+            addMessage(data.response);
+        } else {
+            addMessage("I apologize, but I'm having trouble processing that right now. Could you try rephrasing your question?");
+        }
        } catch (error) {
        removeTypingIndicator();
        addMessage("I'm having trouble connecting to the server. Please check if the Render backend is running.");
@@ -91,6 +117,7 @@ userInput.addEventListener('keypress', (e) => {
 
 // Focus input on load
 userInput.focus();
+
 
 
 
