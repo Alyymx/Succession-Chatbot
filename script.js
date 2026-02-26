@@ -69,10 +69,11 @@ async function sendMessage() {
         } else {
             addMessage("I apologize, but I'm having trouble processing that right now. Could you try rephrasing your question?");
         }
-    } catch (error) {
-        removeTypingIndicator();
+       } catch (error) {
+       removeTypingIndicator();
        addMessage("I'm having trouble connecting to the server. Please check if the Render backend is running.");
-        console.error('Error:', error););
+       console.error('Error:', error);
+   }
     } finally {
         sendButton.disabled = false;
         userInput.focus();
@@ -90,6 +91,7 @@ userInput.addEventListener('keypress', (e) => {
 
 // Focus input on load
 userInput.focus();
+
 
 
 
