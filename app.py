@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 from bs4 import BeautifulSoup
-import re
+from urllib.parse import quote
 
 app = Flask(__name__)
 CORS(app)  # Allow frontend to communicate with backend
@@ -75,7 +75,7 @@ def search_web(query):
     try:
         # Try Wikipedia API first (reliable and free)
         wiki_query = f"{query} succession hbo"
-        wiki_url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + requests.utils.quote(wiki_query.replace(" ", "_"))
+        wiki_url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(wiki_query.replace(" ", "_"))
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
@@ -94,7 +94,7 @@ def search_web(query):
             pass
         
         # Fallback: Use DuckDuckGo Instant Answer API
-        ddg_url = f"https://api.duckduckgo.com/?q={requests.utils.quote(query + ' succession hbo')}&format=json&no_html=1&skip_disambig=1"
+        ddg_url = f"https://api.duckduckgo.com/?q={quote(query + ' succession hbo')}&format=json&no_html=1&skip_disambig=1"
         ddg_response = requests.get(ddg_url, headers=headers, timeout=5)
         
         if ddg_response.status_code == 200:
@@ -105,7 +105,7 @@ def search_web(query):
                 return f"Answer: {ddg_data['Answer']}"
         
         # Last resort: Try scraping DuckDuckGo HTML results
-        search_url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(query + ' succession hbo')}"
+        search_url = f"https://html.duckduckgo.com/html/?q={quote(query + ' succession hbo')}"
         response = requests.get(search_url, headers=headers, timeout=8)
         
         if response.status_code == 200:
@@ -129,6 +129,36 @@ def search_web(query):
         print(f"Web search error: {e}")
     
     return None
+
+def get_knowledge_base_answer(query):
+    """Check knowledge base for answers"""
+    query_lower = query.lower().strip()
+    
+    # Check for actor questions
+    if 'actor' in query_lower or 'plays' in query_lower or 'who plays' in query_lower:
+        for key, value in KNOWLEDGE_BASE.items():
+            if key in query_lower:
+                if 'actor' in value:
+                    return value['actor']
+                elif 'info' in value:
+                    return value['info']
+    
+    # Check for character info
+    if 'character' in query_lower or 'who is' in query_lower:
+        for key, value in KNOWLEDGE_BASE.items():
+            if key in query_lower:
+                if 'character' in value:
+                    return value['character']
+                elif 'info' in value:
+                    return value['info']
+    
+    # General search in knowledge base
+    for key, value in KNOWLEDGE_BASE.items():
+        if key in query_lower:
+            return value.get('info', value.get('character', 'I have some information about that.'))
+    
+    return None
+
 def generate_response(user_message):
     """Generate a friendly response to user's question"""
     user_message_lower = user_message.lower()
@@ -152,6 +182,19 @@ def generate_response(user_message):
     
     # Default friendly response
     return "I'm not entirely sure about that specific detail. I've searched online but couldn't find reliable information. Could you rephrase your question or ask about something else? I can help you with information about characters, actors, plot points, or the show in general. For example, you could ask 'Who plays Kendall Roy?' or 'Tell me about Logan Roy.'"
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    try:
+        data = request.json
+        user_message = data.get('message', '')
+        
+        if not user_message:
+            return jsonify({'response': 'Please ask me a question about Succession!'})
+        
+        response = generate_response(user_message)
+        
+        return jsonify({'response': response})
     
     except Exception as e:
         print(f"Error: {e}")
@@ -160,6 +203,16 @@ def generate_response(user_message):
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok'})
+
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({
+        'message': 'Succession Chatbot API is running!',
+        'endpoints': {
+            '/chat': 'POST - Send a message to the chatbot',
+            '/health': 'GET - Check if the server is running'
+        }
+    })
 
 if __name__ == '__main__':
     import os
@@ -170,4 +223,3 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     # host='0.0.0.0' is important so Render can reach it
     app.run(host="0.0.0.0", port=port)
-
