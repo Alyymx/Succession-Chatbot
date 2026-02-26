@@ -2,8 +2,8 @@ const chatMessages = document.getElementById('chatMessages');
 const userInput = document.getElementById('userInput');
 const sendButton = document.getElementById('sendButton');
 
-// API endpoint - change this to your Python server URL
-const API_URL = 'https://succession-chat-backend.onrender.com/chat';;
+// API endpoint - Render backend URL
+const API_URL = 'https://succession-chatbot.onrender.com/chat';
 
 function addMessage(text, isUser = false) {
     const messageDiv = document.createElement('div');
@@ -71,8 +71,8 @@ async function sendMessage() {
         }
     } catch (error) {
         removeTypingIndicator();
-        addMessage("I'm having trouble connecting to the server. Please make sure the Python backend is running on http://localhost:5000");
-        console.error('Error:', error);
+       addMessage("I'm having trouble connecting to the server. Please check if the Render backend is running.");
+        console.error('Error:', error););
     } finally {
         sendButton.disabled = false;
         userInput.focus();
@@ -90,5 +90,6 @@ userInput.addEventListener('keypress', (e) => {
 
 // Focus input on load
 userInput.focus();
+
 
 
