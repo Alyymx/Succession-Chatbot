@@ -3,7 +3,7 @@ const userInput = document.getElementById('userInput');
 const sendButton = document.getElementById('sendButton');
 
 // API endpoint - change this to your Python server URL
-const API_URL = 'http://localhost:5000/chat';
+const API_URL = 'https://succession-chat-backend.onrender.com/chat';;
 
 function addMessage(text, isUser = false) {
     const messageDiv = document.createElement('div');
@@ -90,3 +90,4 @@ userInput.addEventListener('keypress', (e) => {
 
 // Focus input on load
 userInput.focus();
+
