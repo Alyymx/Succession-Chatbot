@@ -73,54 +73,62 @@ KNOWLEDGE_BASE = {
 def search_web(query):
     """Search the web for Succession-related information"""
     try:
-        # Use DuckDuckGo HTML search (no API key needed)
-        search_url = f"https://html.duckduckgo.com/html/?q={query} succession hbo"
+        # Try Wikipedia API first (reliable and free)
+        wiki_query = f"{query} succession hbo"
+        wiki_url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + requests.utils.quote(wiki_query.replace(" ", "_"))
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        response = requests.get(search_url, headers=headers, timeout=5)
+        
+        try:
+            wiki_response = requests.get(wiki_url, headers=headers, timeout=5)
+            if wiki_response.status_code == 200:
+                wiki_data = wiki_response.json()
+                if 'extract' in wiki_data:
+                    extract = wiki_data['extract']
+                    # Limit to first 300 characters for concise response
+                    if len(extract) > 300:
+                        extract = extract[:300] + "..."
+                    return f"According to Wikipedia: {extract}"
+        except:
+            pass
+        
+        # Fallback: Use DuckDuckGo Instant Answer API
+        ddg_url = f"https://api.duckduckgo.com/?q={requests.utils.quote(query + ' succession hbo')}&format=json&no_html=1&skip_disambig=1"
+        ddg_response = requests.get(ddg_url, headers=headers, timeout=5)
+        
+        if ddg_response.status_code == 200:
+            ddg_data = ddg_response.json()
+            if ddg_data.get('AbstractText'):
+                return f"According to web sources: {ddg_data['AbstractText']}"
+            elif ddg_data.get('Answer'):
+                return f"Answer: {ddg_data['Answer']}"
+        
+        # Last resort: Try scraping DuckDuckGo HTML results
+        search_url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(query + ' succession hbo')}"
+        response = requests.get(search_url, headers=headers, timeout=8)
         
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
-            # Try to extract first result snippet
-            results = soup.find_all('a', class_='result__a')
-            if results:
-                # Return a basic response indicating we found info
-                return f"I found information about '{query}' related to Succession. Based on my knowledge: {get_knowledge_base_answer(query)}"
+            # Look for result snippets
+            result_snippets = soup.find_all('a', class_='result__snippet')
+            if result_snippets:
+                snippet_text = result_snippets[0].get_text(strip=True)
+                if len(snippet_text) > 300:
+                    snippet_text = snippet_text[:300] + "..."
+                return f"I found this information online: {snippet_text}"
+            
+            # Alternative: look for result descriptions
+            result_links = soup.find_all('a', class_='result__a')
+            if result_links:
+                # Try to get context from the result
+                result_text = result_links[0].get_text(strip=True)
+                return f"I found information about '{result_text}' related to Succession. This appears to be a relevant topic, though I'd recommend checking the source for complete details."
+                
     except Exception as e:
         print(f"Web search error: {e}")
     
     return None
-
-def get_knowledge_base_answer(query):
-    """Check knowledge base for answers"""
-    query_lower = query.lower().strip()
-    
-    # Check for actor questions
-    if 'actor' in query_lower or 'plays' in query_lower or 'who plays' in query_lower:
-        for key, value in KNOWLEDGE_BASE.items():
-            if key in query_lower:
-                if 'actor' in value:
-                    return value['actor']
-                elif 'info' in value:
-                    return value['info']
-    
-    # Check for character info
-    if 'character' in query_lower or 'who is' in query_lower:
-        for key, value in KNOWLEDGE_BASE.items():
-            if key in query_lower:
-                if 'character' in value:
-                    return value['character']
-                elif 'info' in value:
-                    return value['info']
-    
-    # General search in knowledge base
-    for key, value in KNOWLEDGE_BASE.items():
-        if key in query_lower:
-            return value.get('info', value.get('character', 'I have some information about that.'))
-    
-    return None
-
 def generate_response(user_message):
     """Generate a friendly response to user's question"""
     user_message_lower = user_message.lower()
@@ -135,21 +143,15 @@ def generate_response(user_message):
     if web_result:
         return web_result
     
+    # If web search didn't work, try a more specific search
+    # Add "Succession HBO" to make search more specific
+    enhanced_query = f"{user_message} Succession HBO"
+    web_result_enhanced = search_web(enhanced_query)
+    if web_result_enhanced:
+        return web_result_enhanced
+    
     # Default friendly response
-    return "I'm not entirely sure about that specific detail. Could you rephrase your question? I can help you with information about characters, actors, plot points, or the show in general. For example, you could ask 'Who plays Kendall Roy?' or 'Tell me about Logan Roy.'"
-
-@app.route('/chat', methods=['POST'])
-def chat():
-    try:
-        data = request.json
-        user_message = data.get('message', '')
-        
-        if not user_message:
-            return jsonify({'response': 'Please ask me a question about Succession!'})
-        
-        response = generate_response(user_message)
-        
-        return jsonify({'response': response})
+    return "I'm not entirely sure about that specific detail. I've searched online but couldn't find reliable information. Could you rephrase your question or ask about something else? I can help you with information about characters, actors, plot points, or the show in general. For example, you could ask 'Who plays Kendall Roy?' or 'Tell me about Logan Roy.'"
     
     except Exception as e:
         print(f"Error: {e}")
@@ -168,3 +170,4 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     # host='0.0.0.0' is important so Render can reach it
     app.run(host="0.0.0.0", port=port)
+
